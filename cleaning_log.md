@@ -50,15 +50,18 @@
 CSV files save values as displayed, so before export:
 - Number columns reset to plain numbers (no currency symbols or thousands separators).
 - Dates reformatted to `yyyy-mm-dd`, the format SQLite date functions require.
-- `Revenue ($m)` renamed to `revenue_m`, since spaces and symbols in column names cause errors in SQL.
+- `Revenue ($m)` renamed to `Revenue_m`, since spaces and symbols in column names cause errors in SQL.
 - Saved as CSV UTF-8 in `data/clean/csv/`; formatted .xlsx files kept unchanged.
 
 ### Import and fixes
 - Imported all four CSVs into `maventech.db` as tables `accounts`, `products`, `sales_teams` and `sales_pipeline`.
 - **Empty text converted to NULL:** the importer reads empty cells as empty text rather than true blanks, so `COUNT()` treats them as values. Converted to NULL in `account`, `engage_date`, `close_date`, `close_value` and `subsidiary_of`.
-- **Column types set:** everything imports as TEXT. Changed `close_value` and `sales_price` to INTEGER, `revenue_m` to REAL and `employees` to INTEGER, so calculations and sorting work correctly.
+- **Column types set:** everything imports as TEXT. Changed `close_value` and `sales_price` to INTEGER, `Revenue_m` to REAL and `employees` to INTEGER, so calculations and sorting work correctly.
 - **Issue found by verification query:** after import, all Engaging and Prospecting deals still counted as having a close value. A diagnostic query showed these were 0s introduced by the `=VALUE()` conversion in Excel.
   - **Fix:** set `close_value` and `close_date` to NULL for all Engaging and Prospecting deals, and `engage_date` to NULL for Prospecting deals. Justified by the stage logic validated during Excel cleaning: open deals cannot have a close value or close date.
+- **Numbers stored as text:** SQLite does not enforce column types, so a value it can't convert is silently kept as text. A `typeof()` check across all number columns showed `employees` held text values such as "2,822": the thousands separator had survived the CSV export.
+  - **Fix:** stripped the commas and converted to integer with `CAST(REPLACE(employees, ',', '') AS INTEGER)`. Re-check confirmed all 85 values stored as integers; `Revenue_m`, `sales_price` and `close_value` were already stored correctly.
+- **Date validity:** SQLite stores dates as text in `YYYY-MM-DD` format. Checked every `engage_date` and `close_date` with `date()`, which returns NULL for anything it cannot read as a date: 0 invalid dates.
 
 ### Final verification
 Count of non-blank values per stage:
@@ -71,3 +74,14 @@ Count of non-blank values per stage:
 | Prospecting | 500 | 0 | 0 | 0 | 163 |
 
 All counts match the stage logic validated in Excel.
+
+All fixes and checks are reproducible in [`sql/01_cleaning_and_verification.sql`](sql/01_cleaning_and_verification.sql).
+
+---
+
+## 3. Assumptions used in the analysis
+
+- **Win rate = Won ÷ (Won + Lost).** Open deals are excluded, because they have not yet had the chance to be won.
+- **Snapshot date = 31 Dec 2017**, the last close date in the data. Used as "today" when measuring how long open deals have been open (rather than the current date, which would make every deal look years old).
+- **Open-deal value is estimated at list price** (`sales_price`). Open deals have no close value; won deals close at almost exactly list price (median ratio 0.998), so list price is a fair estimate.
+- **Deals with no account** (1,425, all open) are included in pipeline counts and value, and excluded from any account- or sector-level analysis.
