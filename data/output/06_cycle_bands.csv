@@ -1,0 +1,6 @@
+time_to_close,band_order,won,lost,total_deals,win_rate_pct
+0–7 days,1,756,657,1413,53.5
+8–30 days,2,1061,689,1750,60.6
+31–60 days,3,377,192,569,66.3
+61–90 days,4,1078,543,1621,66.5
+90+ days,5,966,392,1358,71.1
