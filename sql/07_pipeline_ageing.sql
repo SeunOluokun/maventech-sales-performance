@@ -5,11 +5,11 @@ SELECT MAX(close_date) AS snapshot_date FROM sales_pipeline; -- so today is not 
 
 
     SELECT CASE
-           WHEN days_open <= 30  THEN '1: 0-30 days'
-           WHEN days_open <= 60  THEN '2: 31-60 days'
-           WHEN days_open <= 90  THEN '3: 61-90 days'
-           WHEN days_open <= 138 THEN '4: 91-138 days'
-           ELSE '5: 139+ days (older than any closed deal)'
+           WHEN days_open <= 30  THEN '0-30 days'
+           WHEN days_open <= 60  THEN '31-60 days'
+           WHEN days_open <= 90  THEN '61-90 days'
+           WHEN days_open <= 138 THEN '91-138 days'
+           ELSE '139+ days (older than any closed deal)'
        END                                       AS age_band,
        COUNT(*)                                  AS open_deals,
        SUM(sales_price)                             AS potential_value

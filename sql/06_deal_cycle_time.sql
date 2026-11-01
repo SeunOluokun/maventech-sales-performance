@@ -23,25 +23,32 @@ GROUP BY deal_stage;
 -- whether it's won? (Buckets used because averages hide the spread.)
 -- ---------------------------------------------------------------------
 SELECT CASE
-           WHEN days <= 7  THEN '1: 0-7 days'
-           WHEN days <= 30 THEN '2: 8-30 days'
-           WHEN days <= 60 THEN '3: 31-60 days'
-           WHEN days <= 90 THEN '4: 61-90 days'
-           ELSE '5: 90+ days'
-       END                                                              AS time_to_close,
-       SUM(CASE WHEN deal_stage = 'Won'  THEN 1 ELSE 0 END)             AS won,
-       SUM(CASE WHEN deal_stage = 'Lost' THEN 1 ELSE 0 END)             AS lost,
-       COUNT(*)                                                         AS total_deals,
+           WHEN days <= 7  THEN '0–7 days'
+           WHEN days <= 30 THEN '8–30 days'
+           WHEN days <= 60 THEN '31–60 days'
+           WHEN days <= 90 THEN '61–90 days'
+           ELSE '90+ days'
+       END                                                      AS time_to_close,
+       CASE
+           WHEN days <= 7  THEN 1
+           WHEN days <= 30 THEN 2
+           WHEN days <= 60 THEN 3
+           WHEN days <= 90 THEN 4
+           ELSE 5
+       END                                                      AS band_order,
+       SUM(CASE WHEN deal_stage = 'Won'  THEN 1 ELSE 0 END)     AS won,
+       SUM(CASE WHEN deal_stage = 'Lost' THEN 1 ELSE 0 END)     AS lost,
+       COUNT(*)                                                 AS total_deals,
        ROUND(100.0 * SUM(CASE WHEN deal_stage = 'Won' THEN 1 ELSE 0 END)
-             / COUNT(*), 1)                                             AS win_rate_pct
+             / COUNT(*), 1)                                     AS win_rate_pct
 FROM (
     SELECT deal_stage,
            julianday(close_date) - julianday(engage_date) AS days
     FROM sales_pipeline
     WHERE deal_stage IN ('Won', 'Lost')
 )
-GROUP BY time_to_close
-ORDER BY time_to_close;
+GROUP BY time_to_close, band_order
+ORDER BY band_order;
 
 
 -- ---------------------------------------------------------------------
